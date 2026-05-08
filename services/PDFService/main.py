@@ -38,119 +38,44 @@ DEFAULT_TIMEOUT = 600  # seconds
 async def convert_pdfs_to_markdown(
     pdf_paths: List[str], job_id: str, vdb_task: bool = False
 ) -> List[PDFConversionResult]:
-    """Convert multiple PDFs to Markdown using the external API service"""
-    logger.info(f"Sending {len(pdf_paths)} PDFs to external conversion service")
+    """Convert multiple PDFs to Markdown using pypdf (local, no external API needed)"""
+    import pypdf
+
+    logger.info(f"Converting {len(pdf_paths)} PDFs locally using pypdf")
     with telemetry.tracer.start_as_current_span("pdf.convert_pdfs_to_markdown") as span:
         span.set_attribute("num_pdfs", len(pdf_paths))
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        conversion_results = []
+        for i, path in enumerate(pdf_paths):
+            span.set_attribute(f"pdf_path_{i}", path)
             try:
-                # Send all files in a single request
-                files = []
-                file_handles = []  # Keep track of open file handles
-                for i, path in enumerate(pdf_paths):
-                    file_handle = open(path, "rb")  # Open file
-                    file_handles.append(file_handle)  # Store handle for later cleanup
-                    files.append(
-                        ("files", (f"doc_{i}.pdf", file_handle, "application/pdf"))
+                reader = pypdf.PdfReader(path)
+                pages_text = []
+                for page_num, page in enumerate(reader.pages):
+                    text = page.extract_text() or ""
+                    if text.strip():
+                        pages_text.append(f"## Page {page_num + 1}\n\n{text.strip()}")
+                markdown_content = "\n\n".join(pages_text)
+                if not markdown_content.strip():
+                    raise ValueError("No text could be extracted from PDF")
+                conversion_results.append(
+                    PDFConversionResult(
+                        filename=os.path.basename(path),
+                        content=markdown_content,
+                        status=ConversionStatus.SUCCESS,
                     )
-                    span.set_attribute(f"pdf_path_{i}", path)
-
-                try:
-                    logger.info(f"Sending PDFs to model API: {MODEL_API_URL}")
-                    span.set_attribute("model_api_url", MODEL_API_URL)
-                    logger.info(f"Sending {len(files)} files to model API")
-                    response = await client.post(
-                        f"{MODEL_API_URL}/convert",
-                        files=files,
-                        data={"job_id": job_id, "vdb_task": vdb_task},
-                    )
-                finally:
-                    # Clean up file handles after request is complete
-                    for handle in file_handles:
-                        handle.close()
-
-                if response.status_code != 200:
-                    raise HTTPException(
-                        status_code=response.status_code,
-                        detail=f"Model API error: {response.text}",
-                    )
-
-                task_data = response.json()
-                task_id = task_data["task_id"]
-                span.set_attribute("task_id", task_id)
-
-                # Poll the status endpoint until the task is complete
-                while True:
-                    status_response = await client.get(
-                        f"{MODEL_API_URL}/status/{task_id}"
-                    )
-                    status_data = status_response.json()
-                    logger.debug(
-                        f"Status check response: Code={status_response.status_code}, Data={status_data}"
-                    )
-
-                    if status_response.status_code == 200:
-                        # Task completed successfully
-                        results = status_data.get("result", [])
-                        if results:
-                            # Convert raw results to PDFConversionResult models
-                            conversion_results = []
-                            for result in results:
-                                if result["status"] == "success":
-                                    conversion_results.append(
-                                        PDFConversionResult(
-                                            filename=result.get("filename", "unknown"),
-                                            content=result["content"],
-                                            status=ConversionStatus.SUCCESS,
-                                        )
-                                    )
-                                else:
-                                    conversion_results.append(
-                                        PDFConversionResult(
-                                            filename=result.get("filename", "unknown"),
-                                            error=result.get(
-                                                "error", "Unknown conversion error"
-                                            ),
-                                            status=ConversionStatus.FAILED,
-                                        )
-                                    )
-
-                            logger.info(
-                                f"Successfully received {len(conversion_results)} markdown results"
-                            )
-                            return conversion_results
-
-                        logger.error(
-                            f"No results found in response data: {status_data}"
-                        )
-                        raise HTTPException(
-                            status_code=500,
-                            detail="Server returned success but no results were found",
-                        )
-                    elif status_response.status_code == 202:
-                        # Task still processing
-                        logger.info("Task still processing, waiting 2 seconds...")
-                        await asyncio.sleep(2)
-                    else:
-                        error_msg = status_data.get("error", "Unknown error")
-                        logger.error(f"Error response received: {error_msg}")
-                        raise HTTPException(
-                            status_code=status_response.status_code,
-                            detail=f"PDF conversion failed: {error_msg}",
-                        )
-
-            except httpx.TimeoutException:
-                span.set_status(StatusCode.ERROR)
-                logger.error("Request timed out")
-                raise HTTPException(
-                    status_code=504, detail="Model API request timed out"
                 )
-            except httpx.RequestError as e:
-                span.set_status(StatusCode.ERROR)
-                logger.error(f"Request error: {str(e)}")
-                raise HTTPException(
-                    status_code=502, detail=f"Error connecting to Model API: {str(e)}"
+                logger.info(f"Successfully extracted text from {path} ({len(reader.pages)} pages)")
+            except Exception as e:
+                logger.error(f"Failed to convert {path}: {str(e)}")
+                conversion_results.append(
+                    PDFConversionResult(
+                        filename=os.path.basename(path),
+                        error=str(e),
+                        status=ConversionStatus.FAILED,
+                    )
                 )
+        logger.info(f"Completed local PDF conversion for {len(conversion_results)} files")
+        return conversion_results
 
 
 async def convert_pdfs(

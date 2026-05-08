@@ -14,6 +14,10 @@
 # limitations under the License.
 
 import sys
+import pathlib
+
+_PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent
+_OUTPUT_LOG = _PROJECT_ROOT / "frontend" / "output.log"
 
 """ A logger class for capturing stdout and displaying it to the user on the app. """
 
@@ -35,5 +39,5 @@ class Logger:
 
 def read_logs():
     sys.stdout.flush()
-    with open("/project/frontend/output.log", "r") as f:
+    with open(_OUTPUT_LOG, "r") as f:
         return f.read()

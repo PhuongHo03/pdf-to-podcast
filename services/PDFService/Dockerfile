@@ -19,7 +19,8 @@ RUN pip install --no-cache-dir \
     opentelemetry-exporter-otlp-proto-grpc \
     opentelemetry-instrumentation-httpx \
     opentelemetry-instrumentation-urllib3 \
-    ujson
+    ujson \
+    pypdf
 
 # Copy shared package
 COPY shared /shared

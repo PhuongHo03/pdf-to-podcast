@@ -13,6 +13,26 @@ data/minio
 eval.txt
 .DS_Store
 
+# Local bootstrap/runtime artifacts
+.auto-ports.env
+.auto-ports.compose.yaml
+.deps.hash
+frontend/output.log
+frontend/.frontend.pid
+podcast.mp3
+
+# Optional minimal-push mode (keep local, don't push)
+data/
+.github/skills/
+variables.env
+README.md
+tests/
+workbench/
+samples/
+Makefile
+preBuild.bash
+postBuild.bash
+
 # Ignore generated or temporary files managed by the Workbench
 .project/*
 !.project/spec.yaml

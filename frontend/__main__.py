@@ -24,7 +24,12 @@ import ast
 import re
 
 import uuid
+import pathlib
 from frontend.utils import email_demo, logger
+
+_PROJECT_ROOT = pathlib.Path(__file__).parent.parent
+_MODELS_JSON = _PROJECT_ROOT / "models.json"
+_OUTPUT_LOG = _PROJECT_ROOT / "frontend" / "output.log"
 
 BP_INFO_MARKDOWN="""
 ### Key Features
@@ -92,17 +97,17 @@ async() => {
     if (! title.innerHTML.endsWith("🟢")) { title.innerHTML = title.innerHTML.slice(0,-2) + "🟢"; };
 }
 """
-_SAVE_IMG = "https://media.githubusercontent.com/media/NVIDIA/nim-anywhere/main/code/frontend/_static/images/floppy.png"
-_UNDO_IMG = "https://media.githubusercontent.com/media/NVIDIA/nim-anywhere/main/code/frontend/_static/images/undo.png"
-_HISTORY_IMG = "https://media.githubusercontent.com/media/NVIDIA/nim-anywhere/main/code/frontend/_static/images/history.png"
+_SAVE_IMG = None
+_UNDO_IMG = None
+_HISTORY_IMG = None
 _PSEUDO_FILE_NAME = "models.json 🟢"
-with open("/project/models.json", "r", encoding="UTF-8") as config_file:
+with open(_MODELS_JSON, "r", encoding="UTF-8") as config_file:
     _STARTING_CONFIG = config_file.read()
 
-sys.stdout = logger.Logger("/project/frontend/output.log")
+sys.stdout = logger.Logger(str(_OUTPUT_LOG))
 
 # Gradio Interface
-with gr.Blocks(css=css, js=js_func) as demo:
+with gr.Blocks() as demo:
     gr.Markdown("# NVIDIA AI Blueprint: PDF-to-Podcast")
 
     with gr.Row():
@@ -130,9 +135,9 @@ with gr.Blocks(css=css, js=js_func) as demo:
                         with gr.Group(elem_id="config-wrapper"):
                             with gr.Row(elem_id="config-toolbar", elem_classes=["toolbar"]):
                                 file_title = gr.Markdown(_PSEUDO_FILE_NAME, elem_id="editor-title")
-                                save_btn = gr.Button("", icon=_SAVE_IMG, elem_classes=["toolbar"])
-                                undo_btn = gr.Button("", icon=_UNDO_IMG, elem_classes=["toolbar"])
-                                reset_btn = gr.Button("", icon=_HISTORY_IMG, elem_classes=["toolbar"])
+                                save_btn = gr.Button("Save", elem_classes=["toolbar"])
+                                undo_btn = gr.Button("Undo", elem_classes=["toolbar"])
+                                reset_btn = gr.Button("Reset", elem_classes=["toolbar"])
                             with gr.Row(elem_id="config-row-box"):
                                 editor = gr.Code(
                                     elem_id="config-editor",
@@ -158,7 +163,7 @@ with gr.Blocks(css=css, js=js_func) as demo:
     
     def read_chain_config() -> str:
         """Read the chain config file."""
-        with open("/project/models.json", "r", encoding="UTF-8") as cf:
+        with open(_MODELS_JSON, "r", encoding="UTF-8") as cf:
             return cf.read()
 
     demo.load(read_chain_config, outputs=editor)
@@ -181,7 +186,7 @@ with gr.Blocks(css=css, js=js_func) as demo:
             raise SyntaxError(f"Error validating JSON syntax:\n{err}") from err
 
         # save configuration
-        with open("/project/models.json", "w", encoding="UTF-8") as cf:
+        with open(_MODELS_JSON, "w", encoding="UTF-8") as cf:
             cf.write(config_txt)
 
     save_btn.click(None, js=_SAVE_CHANGES_JS)
@@ -199,35 +204,82 @@ with gr.Blocks(css=css, js=js_func) as demo:
         service = os.environ["API_SERVICE_URL"]
         url = f"{service}/saved_podcast/{job_id}/transcript"
         params = {"userId": "test-userid"}
-        filepath = "/project/frontend/demo_outputs/transcript_" + filename + ".json"
-        
-        response = requests.get(url, params=params)
-        if response.status_code == 200:
-            json_data = response.json()
-            with open(filepath, "w") as file:
-                json.dump(json_data, file)
-            print(f"JSON data saved to {filepath}")
-            return filepath
-        else:
+        filepath = str(_PROJECT_ROOT / "frontend" / "demo_outputs" / ("transcript_" + filename + ".json"))
+
+        try:
+            response = requests.get(url, params=params)
+            if response.status_code == 200:
+                json_data = response.json()
+                with open(filepath, "w") as file:
+                    json.dump(json_data, file)
+                print(f"JSON data saved to {filepath}")
+                return filepath
+
             print(f"Error retrieving transcript: {response.status_code}")
+            with open(filepath, "w") as file:
+                json.dump(
+                    {
+                        "error": "Failed to retrieve transcript",
+                        "status_code": response.status_code,
+                        "response": response.text,
+                    },
+                    file,
+                )
+            return filepath
+        except Exception as e:
+            print(f"Exception retrieving transcript: {e}")
+            with open(filepath, "w") as file:
+                json.dump(
+                    {
+                        "error": "Exception while retrieving transcript",
+                        "detail": str(e),
+                    },
+                    file,
+                )
             return filepath
 
     def get_history(filename, job_id):
         service = os.environ["API_SERVICE_URL"]
         url = f"{service}/saved_podcast/{job_id}/history"
         params = {"userId": "test-userid"}
-        filepath = "/project/frontend/demo_outputs/generation_history_" + filename + ".json"
-        response = requests.get(url, params=params)
+        filepath = str(_PROJECT_ROOT / "frontend" / "demo_outputs" / ("generation_history_" + filename + ".json"))
+        try:
+            response = requests.get(url, params=params)
 
-        if response.status_code == 200:
-            json_data = response.json()
-            with open(filepath, "w") as file:
-                json.dump(json_data, file)
-            print(f"JSON data saved to {filepath}")
-            return filepath
-        else:
+            if response.status_code == 200:
+                json_data = response.json()
+                with open(filepath, "w") as file:
+                    json.dump(json_data, file)
+                print(f"JSON data saved to {filepath}")
+                return filepath
+
             print(f"Error retrieving generation_history: {response.status_code}")
+            with open(filepath, "w") as file:
+                json.dump(
+                    {
+                        "error": "Failed to retrieve generation history",
+                        "status_code": response.status_code,
+                        "response": response.text,
+                    },
+                    file,
+                )
             return filepath
+        except Exception as e:
+            print(f"Exception retrieving generation_history: {e}")
+            with open(filepath, "w") as file:
+                json.dump(
+                    {
+                        "error": "Exception while retrieving generation history",
+                        "detail": str(e),
+                    },
+                    file,
+                )
+            return filepath
+
+    def file_component_update(path, label):
+        if path and os.path.exists(path):
+            return gr.update(value=path, label=label, visible=True)
+        return gr.update(value=None, label=label, visible=False)
 
     def generate_podcast(target, context, recipient, settings):
         if target is None or len(target) == 0:
@@ -246,6 +298,7 @@ with gr.Blocks(css=css, js=js_func) as demo:
         vdb = False # True if "Vector Database" in settings else False
         filename = str(uuid.uuid4())
         sender_validation = validate_sender(sender_email)
+        recipient = recipient or ""
         if not sender_validation and len(recipient) > 0:
             gr.Warning("SENDER_EMAIL not detected or malformed. Please fix or remove recipient email and try again. You may need to restart the container for Environment Variable changes to take effect. ")
             return gr.update(visible=False)
@@ -257,12 +310,23 @@ with gr.Blocks(css=css, js=js_func) as demo:
         # Generate podcast
         job_id = email_demo.test_api(base_url, target, context, email, monologue, vdb)
 
+        output_name = recipient.split('@')[0] if (sender_validation and len(recipient) > 0 and "SENDER_EMAIL_PASSWORD" in os.environ) else filename
+        output_path = str(_PROJECT_ROOT / "frontend" / "demo_outputs" / (output_name + "-output.mp3"))
+        transcript_path = get_transcript(output_name, job_id)
+        history_path = get_history(output_name, job_id)
+
         # Send file via email
         if sender_validation and len(recipient) > 0 and "SENDER_EMAIL_PASSWORD" in os.environ:
-            email_demo.send_file_via_email("/project/frontend/demo_outputs/" + recipient.split('@')[0] + "-output.mp3", sender_email, recipient)
-            return gr.update(value="/project/frontend/demo_outputs/" + recipient.split('@')[0] + "-output.mp3", label="podcast audio", visible=True), gr.update(value=get_transcript(recipient.split('@')[0], job_id), label="podcast transcript", visible=True), gr.update(value=get_history(recipient.split('@')[0], job_id), label="generation history", visible=True)
+            if os.path.exists(output_path):
+                email_demo.send_file_via_email(output_path, sender_email, recipient)
+            else:
+                print(f"Audio file missing, skipping email send: {output_path}")
 
-        return gr.update(value="/project/frontend/demo_outputs/" + filename + "-output.mp3", label="podcast audio", visible=True), gr.update(value=get_transcript(filename, job_id), label="podcast transcript", visible=True), gr.update(value=get_history(filename, job_id), label="generation history", visible=True)
+        return (
+            file_component_update(output_path, "podcast audio"),
+            file_component_update(transcript_path, "podcast transcript"),
+            file_component_update(history_path, "generation history"),
+        )
 
     generate_button.click(generate_podcast, [target_files, 
                                              context_files, 
@@ -271,4 +335,9 @@ with gr.Blocks(css=css, js=js_func) as demo:
 
 # Launch Gradio app
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", root_path=os.environ.get("PROXY_PREFIX"))
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=int(os.environ.get("FRONTEND_PORT", "7860")),
+        root_path=os.environ.get("PROXY_PREFIX"),
+        css=css,
+    )

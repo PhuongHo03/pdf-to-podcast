@@ -246,11 +246,11 @@ def test_api(
     vdb: bool = False,
 ):
     voice_mapping = {
-        "speaker-1": "iP95p4xoKVk53GoZ742B",
+        "speaker-1": os.getenv("DEFAULT_VOICE_1", "nPczCjzI2devNBz1zQrb"),
     }
 
     if not monologue:
-        voice_mapping["speaker-2"] = "9BWtsMINqrJLrRacOk9x"
+        voice_mapping["speaker-2"] = os.getenv("DEFAULT_VOICE_2", "EXAVITQu4vr4xnSDxMaL")
 
     process_url = f"{base_url}/process_pdf"
 
@@ -344,7 +344,9 @@ def test_api(
             audio_content = get_output_with_retry(base_url, job_id)
 
             # Save the audio file
-            output_path = os.path.join("/project/frontend/demo_outputs/", str(email[0]).split('@')[0] + "-output.mp3")
+            _demo_outputs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "demo_outputs")
+            os.makedirs(_demo_outputs_dir, exist_ok=True)
+            output_path = os.path.join(_demo_outputs_dir, str(email[0]).split('@')[0] + "-output.mp3")
             with open(output_path, "wb") as f:
                 f.write(audio_content)
             print(
