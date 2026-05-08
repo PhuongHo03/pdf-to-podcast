@@ -28,6 +28,8 @@
 
 ## 2) Khởi động hệ thống
 
+> Thực hiện tất cả lệnh bên dưới sau khi đã `cd` vào thư mục gốc project `pdf-to-podcast`.
+
 ### Điều kiện cần
 - Docker Desktop + Docker Compose.
 - Bash shell:
@@ -47,19 +49,19 @@ Script `setup.sh` đã hỗ trợ full lifecycle:
 ### Lệnh chạy trên Windows (PowerShell)
 ```powershell
 # Khởi động toàn bộ
-& "C:\Program Files\Git\bin\bash.exe" .\setup.sh --up
+bash ./setup.sh --up
 
 # Dừng toàn bộ
-& "C:\Program Files\Git\bin\bash.exe" .\setup.sh --down
+bash ./setup.sh --down
 
 # Reset sạch tuyệt đối
-& "C:\Program Files\Git\bin\bash.exe" .\setup.sh --clean
+bash ./setup.sh --clean
 ```
 
 ### Lệnh chạy trên Linux
 ```bash
-# Tại thư mục project
-cd /path/to/pdf-to-podcast
+# Tại thư mục project (nếu chưa ở đó)
+cd pdf-to-podcast
 
 # Cấp quyền chạy script (lần đầu)
 chmod +x setup.sh
