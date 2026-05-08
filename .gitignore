@@ -92,3 +92,5 @@ frontend/demo_outputs/*.json
 workbench/nim_cache/huggingface/
 workbench/nim_cache/local_cache/
 workbench/nim_cache/ngc/
+
+ruff.toml
