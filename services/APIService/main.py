@@ -718,6 +718,8 @@ async def get_saved_podcast_transcript(
             raise HTTPException(
                 status_code=500, detail=f"Invalid transcript format: {str(e)}"
             )
+        except HTTPException:
+            raise
         except Exception as e:
             span.set_status(StatusCode.ERROR, "failed to get transcript")
             logger.error(f"Failed to get transcript for {job_id}: {str(e)}")
@@ -758,6 +760,8 @@ async def get_saved_podcast_agent_workflow(
 
             return PromptTracker.model_validate_json(raw_data)
 
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Failed to get history for {job_id}: {str(e)}")
             span.set_status(StatusCode.ERROR, "failed to get history")

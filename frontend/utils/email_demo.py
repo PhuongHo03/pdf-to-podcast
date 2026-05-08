@@ -328,9 +328,20 @@ def test_api(
         monitor.start()
 
         try:
-            # Wait for TTS completion or timeout
+            # Wait for completion and fail fast if any service reports failed status.
             max_wait = 40 * 60
-            if not monitor.tts_completed.wait(timeout=max_wait):
+            wait_interval = 1
+            elapsed = 0
+            while elapsed < max_wait:
+                if monitor.tts_completed.wait(timeout=wait_interval):
+                    break
+                if monitor.stop_event.is_set() and not monitor.tts_completed.is_set():
+                    raise RuntimeError(
+                        "Job stopped before TTS completion. Check API/Agent/TTS logs for failure details."
+                    )
+                elapsed += wait_interval
+
+            if not monitor.tts_completed.is_set():
                 raise TimeoutError(f"Test timed out after {max_wait} seconds")
 
             # If we get here, TTS completed successfully
@@ -369,9 +380,10 @@ def test_api(
                 print(f"RAG Query: '{test_query}'")
                 print(f"RAG Results: {json.dumps(rag_results, indent=2)}")
 
+            return job_id
+
         finally:
             monitor.stop()
-            return job_id
 
     except Exception as e:
         print(f"Error during PDF submission: {e}")
