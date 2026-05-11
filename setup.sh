@@ -191,18 +191,18 @@ raise SystemExit(1)
 PY
 }
 
-REDIS_PORT="$(find_free_port 6379)"
-MINIO_API_PORT="$(find_free_port 9000)"
-MINIO_CONSOLE_PORT="$(find_free_port 9001)"
-API_SERVICE_PORT="$(find_free_port 8002)"
-PDF_SERVICE_PORT="$(find_free_port 8003)"
-PDF_API_PORT="$(find_free_port 8004)"
-TTS_SERVICE_PORT="$(find_free_port 8889)"
-AGENT_SERVICE_PORT="$(find_free_port 8964)"
-JAEGER_UI_PORT="$(find_free_port 16686)"
-OTLP_GRPC_PORT="$(find_free_port 4317)"
-OTLP_HTTP_PORT="$(find_free_port 4318)"
-FRONTEND_PORT="$(find_free_port 7860)"
+REDIS_PORT="$(find_free_port "${REDIS_PORT:-6379}")"
+MINIO_API_PORT="$(find_free_port "${MINIO_API_PORT:-9000}")"
+MINIO_CONSOLE_PORT="$(find_free_port "${MINIO_CONSOLE_PORT:-9001}")"
+API_SERVICE_PORT="$(find_free_port "${API_SERVICE_PORT:-8002}")"
+PDF_SERVICE_PORT="$(find_free_port "${PDF_SERVICE_PORT:-8003}")"
+PDF_API_PORT="$(find_free_port "${PDF_API_PORT:-8004}")"
+TTS_SERVICE_PORT="$(find_free_port "${TTS_SERVICE_PORT:-8889}")"
+AGENT_SERVICE_PORT="$(find_free_port "${AGENT_SERVICE_PORT:-8964}")"
+JAEGER_UI_PORT="$(find_free_port "${JAEGER_UI_PORT:-16686}")"
+OTLP_GRPC_PORT="$(find_free_port "${OTLP_GRPC_PORT:-4317}")"
+OTLP_HTTP_PORT="$(find_free_port "${OTLP_HTTP_PORT:-4318}")"
+FRONTEND_PORT="$(find_free_port "${FRONTEND_PORT:-7860}")"
 
 cat > "$AUTO_PORTS_FILE" <<EOF
 REDIS_PORT=${REDIS_PORT}
