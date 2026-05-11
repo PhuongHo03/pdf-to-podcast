@@ -11,6 +11,17 @@ FRONTEND_LOG="${PROJECT_ROOT}/frontend/output.log"
 FRONTEND_PID_FILE="${PROJECT_ROOT}/frontend/.frontend.pid"
 DEPS_HASH_FILE="${PROJECT_ROOT}/.deps.hash"
 
+ensure_env_file() {
+    if [ ! -f "${PROJECT_ROOT}/.env" ]; then
+        if [ ! -f "${PROJECT_ROOT}/.env.example" ]; then
+            echo "Error: .env is missing and .env.example was not found."
+            exit 1
+        fi
+        cp "${PROJECT_ROOT}/.env.example" "${PROJECT_ROOT}/.env"
+        echo "Created .env from .env.example. Replace placeholder API keys for full podcast generation."
+    fi
+}
+
 usage() {
         cat <<'EOF'
 Usage:
@@ -40,6 +51,7 @@ stop_frontend() {
 
 do_down() {
     require_cmd docker
+    ensure_env_file
 
     echo "[1/2] Stopping frontend..."
     stop_frontend
@@ -57,6 +69,7 @@ do_down() {
 
 do_clean() {
     require_cmd docker
+    ensure_env_file
 
     echo "[1/4] Stopping frontend..."
     stop_frontend
@@ -82,6 +95,7 @@ do_up() {
     echo "[1/7] Checking required tools..."
     require_cmd docker
     require_cmd bash
+    ensure_env_file
 
     echo "[2/7] Ensuring uv is installed..."
     if ! command -v uv >/dev/null 2>&1; then
