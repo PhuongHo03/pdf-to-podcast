@@ -167,7 +167,7 @@ fi
 find_free_port() {
     local start_port="$1"
     local py_exec
-    py_exec="$(command -v python3 || command -v python)"
+    py_exec="$(command -v python || command -v python3)"
     if [ -z "${py_exec:-}" ]; then
         echo "Error: python/python3 not found for port detection."
         exit 1
