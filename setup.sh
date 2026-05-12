@@ -269,7 +269,9 @@ EOF
     export FRONTEND_PORT
 
     nohup python -m frontend > "$FRONTEND_LOG" 2>&1 &
-    echo $! > "$FRONTEND_PID_FILE"
+    frontend_pid="$!"
+    echo "$frontend_pid" > "$FRONTEND_PID_FILE"
+    disown "$frontend_pid" >/dev/null 2>&1 || true
 
     echo
     echo "Bootstrap completed successfully."
