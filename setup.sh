@@ -38,6 +38,23 @@ require_cmd() {
     fi
 }
 
+retry() {
+    local max_attempts="$1"
+    shift
+    local attempt
+    for attempt in $(seq 1 "$max_attempts"); do
+        if "$@"; then
+            return 0
+        fi
+        local status="$?"
+        if [ "$attempt" -eq "$max_attempts" ]; then
+            return "$status"
+        fi
+        echo "Command failed with exit code ${status}; retrying (${attempt}/${max_attempts})..."
+        sleep $((attempt * 10))
+    done
+}
+
 stop_frontend() {
     if [ -f "$FRONTEND_PID_FILE" ]; then
         old_pid="$(cat "$FRONTEND_PID_FILE" || true)"
@@ -157,8 +174,8 @@ if [ "$current_deps_hash" = "$previous_deps_hash" ]; then
     echo "Dependencies unchanged, skipping uv pip install."
 else
     echo "Dependency changes detected, installing/updating packages..."
-    uv pip install -r requirements.txt
-    uv pip install -e shared/
+    retry 3 uv pip install -r requirements.txt
+    retry 3 uv pip install -e shared/
     echo "$current_deps_hash" > "$DEPS_HASH_FILE"
 fi
 

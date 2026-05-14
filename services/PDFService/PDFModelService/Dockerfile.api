@@ -13,7 +13,17 @@ WORKDIR /app
 
 # Install Python dependencies - only API requirements
 COPY requirements.api.txt /app/
-RUN pip install -r requirements.api.txt
+RUN set -eux; \
+    pip_retry() { \
+        for attempt in 1 2 3; do \
+            python -m pip install --no-cache-dir --retries 10 --timeout 60 "$@" && return 0; \
+            status="$?"; \
+            if [ "$attempt" = "3" ]; then return "$status"; fi; \
+            sleep "$((attempt * 10))"; \
+        done; \
+    }; \
+    pip_retry --upgrade pip setuptools wheel; \
+    pip_retry -r requirements.api.txt
 
 # Copy application files
 COPY main.py /app/
