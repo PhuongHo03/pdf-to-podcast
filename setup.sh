@@ -73,11 +73,11 @@ do_down() {
     echo "[1/2] Stopping frontend..."
     stop_frontend
 
-    echo "[2/2] Stopping Docker services..."
+    echo "[2/2] Stopping Docker services and removing service images..."
     if [ -f "$AUTO_COMPOSE_OVERRIDE" ]; then
-        docker compose -f docker-compose.yaml -f "$AUTO_COMPOSE_OVERRIDE" --env-file .env down --remove-orphans
+        docker compose -f docker-compose.yaml -f "$AUTO_COMPOSE_OVERRIDE" --env-file .env down --remove-orphans --rmi all
     else
-        docker compose --env-file .env down --remove-orphans
+        docker compose --env-file .env down --remove-orphans --rmi all
     fi
 
     echo
@@ -91,11 +91,11 @@ do_clean() {
     echo "[1/4] Stopping frontend..."
     stop_frontend
 
-    echo "[2/4] Stopping Docker services and removing volumes..."
+    echo "[2/4] Stopping Docker services and removing volumes/images..."
     if [ -f "$AUTO_COMPOSE_OVERRIDE" ]; then
-        docker compose -f docker-compose.yaml -f "$AUTO_COMPOSE_OVERRIDE" --env-file .env down -v --remove-orphans
+        docker compose -f docker-compose.yaml -f "$AUTO_COMPOSE_OVERRIDE" --env-file .env down -v --remove-orphans --rmi all
     else
-        docker compose --env-file .env down -v --remove-orphans
+        docker compose --env-file .env down -v --remove-orphans --rmi all
     fi
 
     echo "[3/4] Removing generated runtime files..."
