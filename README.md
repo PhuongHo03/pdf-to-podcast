@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://github.com/user-attachments/assets/cbe0d62f-c856-4e0b-b3ee-6184b7c4d96f" alt="PDF to Podcast banner" width="100%" />
+<img src="images/banner.png" alt="PDF to Podcast banner" width="100%" />
 
 # NVIDIA AI Blueprint: PDF to Podcast
 
